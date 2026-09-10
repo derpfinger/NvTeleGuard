@@ -131,13 +131,13 @@ function Get-TelemetryTargets {
         foreach ($t in $updateTasks) {
             $list.Add((New-Target -Id "task:$($t.TaskPath)$($t.TaskName)" -Category 'Update-Check Tasks (optional)' -Order 5 `
                 -DisplayName "Scheduled task $($t.TaskName)" `
-                -Description 'Phones home to check for NVIDIA App / driver updates. Not telemetry as such - leave enabled if you want update notifications.' `
+                -Description 'This task phones home to NVIDIA to check for NVIDIA App / driver updates. Switch OFF = NVIDIA keeps checking and can self-update. Switch ON + Apply Changes = the task is disabled and the system stops contacting NVIDIA for update checks (you can still update manually).' `
                 -Kind 'ScheduledTask' -Params @{ TaskPath = $t.TaskPath; TaskName = $t.TaskName }))
         }
     } else {
         $list.Add((New-Target -Id 'task:update:none' -Category 'Update-Check Tasks (optional)' -Order 5 `
             -DisplayName 'NVIDIA update-check tasks' `
-            -Description 'NVIDIA App SelfUpdate / NvDriverUpdateCheck / NvProfileUpdater tasks. None exist on this system.' `
+            -Description 'NVIDIA App SelfUpdate / NvDriverUpdateCheck / NvProfileUpdater tasks that phone home for update checks. None exist on this system, so there is nothing to switch.' `
             -Kind 'Absent' -Params @{ Reason = 'No update-check scheduled tasks found' }))
     }
 

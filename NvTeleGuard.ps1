@@ -135,7 +135,7 @@ $script:CategoryNotes = @{
     'Legacy Telemetry Service'                 = 'GeForce Experience-era drivers only. Greyed out means your driver does not ship it.'
     'Legacy Telemetry Tasks'                   = 'Scheduled NvTm* tasks from older drivers. Enumerated live, so they appear automatically if a driver adds them back.'
     'Legacy Registry Opt-Out Flags'            = 'Opt-out registry values that older Control Panel / GeForce Experience builds honour.'
-    'Update-Check Tasks (optional)'            = 'Not telemetry - these check for NVIDIA App and driver updates. Left alone by Select Recommended.'
+    'Update-Check Tasks (optional)'            = 'Not telemetry - these tasks contact NVIDIA to look for app / driver updates. Switch OFF leaves self-updating alone; switch ON + Apply Changes stops the phoning home. Left alone by Select Recommended.'
     'Advanced / Aggressive'                    = 'Bigger hammers with side effects. Read each description before switching one on. Never part of Select Recommended.'
 }
 

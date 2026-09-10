@@ -2,7 +2,7 @@
 
 A small Windows utility that turns NVIDIA driver / NVIDIA App telemetry off — with every change reversible, every action logged, and a status test that shows you what is actually running.
 
-![NvTeleGuard main window](docs/screenshot.png)
+![NvTeleGuard main window after a status test](docs/screenshot-main.png)
 
 Old telemetry blockers haven't been updated in many years, this is built for the NVIDIA App era: on current drivers the standalone telemetry service, `NvTm*` scheduled tasks and opt-out registry keys that older tools targeted **no longer exist**. The telemetry client is now a plugin that the NVIDIA LocalSystem Container loads through a directory junction — and that junction is what NvTeleGuard removes.
 
@@ -14,6 +14,8 @@ Old telemetry blockers haven't been updated in many years, this is built for the
 | Stop + disable `NvTelemetryContainer`, disable `NvTm*` scheduled tasks, set `OptInOrOutPreference` / `Global\FTS EnableRID*` opt-out values | GeForce Experience-era drivers (shown greyed out where absent) |
 | Disable NVIDIA App SelfUpdate / driver-update-check tasks | Optional — not telemetry, left alone by *Select Recommended* |
 | Advanced: disable the whole LocalSystem container, IFEO hard-block, hosts-file block of the confirmed upload endpoints | Opt-in only, with warnings |
+
+![Advanced section expanded, dry run on, a pending change waiting for Apply](docs/screenshot-advanced.png)
 
 **Test Telemetry Status** runs a read-only diagnostic and writes the findings into the log: driver / NVIDIA App / Telemetry Client versions, each control's live state, whether the telemetry DLL is loaded in any process, the consent flags NVIDIA stores in `telemetry_switch.ini`, how many events are queued in `events.dat`, and which endpoints the hosts file blocks.
 

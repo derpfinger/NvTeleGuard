@@ -14,6 +14,9 @@
     Start with dry-run mode on: every action is logged as [DryRun] and nothing is changed.
 .PARAMETER ScreenshotPath
     Development aid: build the window, run the status test, render to a PNG and exit.
+.PARAMETER ScreenshotScene
+    With -ScreenshotPath: 'main' (default view) or 'advanced' (Advanced section expanded,
+    dry run on, a pending change shown).
 .PARAMETER ShowConsole
     Keep the PowerShell console window visible behind the GUI.
 #>
@@ -22,6 +25,7 @@ param(
     [switch]$NoElevate,
     [switch]$DryRun,
     [string]$ScreenshotPath,
+    [ValidateSet('main', 'advanced')][string]$ScreenshotScene = 'main',
     [switch]$ShowConsole
 )
 
@@ -46,7 +50,7 @@ function Get-RelaunchArguments {
     $list = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-STA', '-File', ('"{0}"' -f $PSCommandPath))
     if ($DryRun) { $list += '-DryRun' }
     if ($ShowConsole) { $list += '-ShowConsole' }
-    if ($ScreenshotPath) { $list += @('-ScreenshotPath', ('"{0}"' -f $ScreenshotPath)) }
+    if ($ScreenshotPath) { $list += @('-ScreenshotPath', ('"{0}"' -f $ScreenshotPath), '-ScreenshotScene', $ScreenshotScene) }
     if ($IncludeNoElevate -or $NoElevate) { $list += '-NoElevate' }
     return $list
 }
@@ -647,11 +651,29 @@ $W.Add_ContentRendered({
         if ($script:ScreenshotPath) {
             Invoke-StatusTest
             Invoke-CheckUpdates
-            # Demonstrate the pending state: request the opposite of the plugin card's live state.
-            if ($script:Cards.ContainsKey('plugin:NvTelemetry')) {
-                $live = $script:Cards['plugin:NvTelemetry'].State
-                Invoke-SwitchToggle -Id 'plugin:NvTelemetry' -Checked ($live -ne 'Disabled')
+            if ($ScreenshotScene -eq 'advanced') {
+                $script:AdvancedAcknowledged = $true
+                Switch-AdvancedSection
+                $UI.DryRunSwitch.IsChecked = $true
+                $script:DryRun = $true
+                Write-Log -Category 'Mode' -Message 'Dry run ON - Apply Changes will only log what would happen' -Result 'Info'
+                # Show a pending change on the first advanced card that can take one (opposite of its live state).
+                foreach ($id in 'hosts:telemetry', 'service:NvContainerLocalSystem', 'ifeo:NvTelemetryContainer.exe') {
+                    $c = $script:Cards[$id]
+                    if ($c -and $c.State -ne 'NotPresent') { Invoke-SwitchToggle -Id $id -Checked ($c.State -ne 'Disabled'); break }
+                }
+                Update-Summary
+                # Taller window so the whole Advanced section fits, scrolled so its header is at the top.
+                $W.Height = 960
+                Update-Ui
+                $UI.SectionsPanel.UpdateLayout()
+                $scroller = $UI.SectionsPanel.Parent
+                if ($scroller -is [Windows.Controls.ScrollViewer] -and $script:AdvancedHeader) {
+                    $offset = $script:AdvancedHeader.TranslatePoint((New-Object Windows.Point(0, 0)), $UI.SectionsPanel).Y
+                    $scroller.ScrollToVerticalOffset([Math]::Max(0, $offset - 8))
+                }
             }
+            Update-Ui
             Update-Ui
             Save-Screenshot -Path $script:ScreenshotPath
             $W.Close()

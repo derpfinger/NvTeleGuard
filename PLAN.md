@@ -136,8 +136,8 @@ Junction removal uses `[IO.Directory]::Delete()` on the reparse point after asse
 ### 7.3 Activity log
 `actions.log` line format: `2026-09-10 12:33:55  [Category]  message  [Result]  - detail`. The in-app panel shows the same lines colour-coded (green OK, amber Warn/DryRun, red Failed, dim Skipped).
 
-### 7.4 Check for updates (placeholder)
-`UpdateCheck.psm1` → `Get-LatestReleaseInfo` returns `1.0.0` from a mock; `Test-ForUpdates` does a real `[version]` compare. Result shows in a banner under the header ("You're already on the latest version (1.0.0)" / "Update available: x → y" + link) and is logged. Swapping the mock for `Invoke-RestMethod https://api.github.com/repos/<owner>/<repo>/releases/latest` is the only change needed later.
+### 7.4 Check for updates
+`UpdateCheck.psm1` → `Get-LatestReleaseInfo` calls `https://api.github.com/repos/derpfinger/NvTeleGuard/releases/latest` (TLS 1.2 forced for Windows PowerShell 5.1; a 404 means "no releases yet" and is reported as up to date). `Test-ForUpdates` does a real `[version]` compare against the release tag. Result shows in a banner under the header ("You're already on the latest version (1.0.0)" / "Update available: x → y" + link to the release page) and is logged. Bump `$script:AppVersion` in `NvTeleGuard.ps1` and tag the release `vX.Y.Z` to ship an update.
 
 ### 7.5 GUI / theme
 Palette avoids NVIDIA's trademarked `#76B900`: accent `#4CAF50`, window `#1E1E1E`, cards `#2D2D30`, text `#F0F0F0` / `#B0B0B0`, amber `#FFB300` for the Advanced section and "ACTIVE" pills, red `#E53935` for failures. Layout: header (admin pill, version, Check for Updates) → update banner → action bar (summary, **Test Telemetry Status**, Refresh, Select Recommended, **Apply Changes**, Restore All Original) → scrollable sections of cards (name, description, live detail, pill, pending tag, switch) → activity log (Undo Last Action, Open Log File, Clear View) → status bar with a **Dry run** switch. The Advanced section is collapsed and requires an acknowledgement dialog the first time it is expanded; Advanced items are listed under their own warning heading in the Apply Changes confirmation.
@@ -190,8 +190,8 @@ Still to do (needs an elevated run — a real change to the system):
 - [x] **Phase 4 — Undo + persistent log.** `ActionLog.psm1`, undo stack, Restore All.
 - [x] **Phase 5 — Check for Updates.** `UpdateCheck.psm1` placeholder + banner.
 - [x] **Phase 5b — Test Telemetry Status.** `StatusReport.psm1` + button (user request).
-- [ ] **Phase 6 — Packaging & polish.** Elevated apply/undo test pass (§9), icon, optional `ps2exe` build, `git init` + first commit.
-- [ ] **Phase 7 (future) — Real GitHub integration.** Replace the mock in `Get-LatestReleaseInfo`.
+- [x] **Phase 6 — Packaging & publish.** Renamed to NvTeleGuard, README + MIT license, published to [github.com/derpfinger/NvTeleGuard](https://github.com/derpfinger/NvTeleGuard) with a portable zip on release v1.0.0. Still open: icon, optional `ps2exe` build, batch-undo elevated test (§9).
+- [x] **Phase 7 — Real GitHub integration.** `Get-LatestReleaseInfo` now calls the GitHub Releases API for `derpfinger/NvTeleGuard` (TLS 1.2 forced, 404 = "no releases yet" handled gracefully).
 
 ---
 

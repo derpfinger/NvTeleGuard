@@ -18,10 +18,12 @@ function Get-ConsentFileSummary {
     if (-not (Test-Path -LiteralPath $Path)) { return $null }
     try {
         $json = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop | ConvertFrom-Json
+        # The numeric keys are NVIDIA component IDs hard-coded in NVIDIA's own DLLs (identical on every
+        # PC with the same software), not per-user or per-device identifiers.
         $device = @()
-        if ($json.GDPRDevice) { foreach ($prop in $json.GDPRDevice.PSObject.Properties) { $device += "client $($prop.Name)=$($prop.Value)" } }
+        if ($json.GDPRDevice) { foreach ($prop in $json.GDPRDevice.PSObject.Properties) { $device += "component $($prop.Name)=$($prop.Value)" } }
         $user = @()
-        if ($json.GDPRUser) { foreach ($prop in $json.GDPRUser.PSObject.Properties) { $user += "user $($prop.Name)=$($prop.Value)" } }
+        if ($json.GDPRUser) { foreach ($prop in $json.GDPRUser.PSObject.Properties) { $user += "user-scope $($prop.Name)=$($prop.Value)" } }
         $consented = @($json.GDPRDevice.PSObject.Properties | Where-Object { [int]$_.Value -ne 0 }).Count
         return [PSCustomObject]@{ Device = $device; User = $user; ConsentedCount = $consented; Total = @($json.GDPRDevice.PSObject.Properties).Count }
     } catch {
@@ -99,8 +101,8 @@ function Get-TelemetryStatusReport {
         $dat = Join-Path $store.Dir 'events.dat'
         $summary = Get-ConsentFileSummary $ini
         if ($summary) {
-            if ($summary.ConsentedCount -gt 0) { $lines.Add((New-StatusLine 'Warn' "$($store.Label): consent file says $($summary.ConsentedCount) of $($summary.Total) client IDs opted in ($($summary.Device -join ', '))")) }
-            elseif ($summary.ConsentedCount -eq 0) { $lines.Add((New-StatusLine 'OK' "$($store.Label): consent file shows no opted-in client IDs")) }
+            if ($summary.ConsentedCount -gt 0) { $lines.Add((New-StatusLine 'Warn' "$($store.Label): consent file says $($summary.ConsentedCount) of $($summary.Total) NVIDIA components are opted in - these are NVIDIA component IDs, not identifiers for you or this PC ($($summary.Device -join ', '))")) }
+            elseif ($summary.ConsentedCount -eq 0) { $lines.Add((New-StatusLine 'OK' "$($store.Label): consent file shows no opted-in NVIDIA components")) }
             else { $lines.Add((New-StatusLine 'Info' "$($store.Label): $($summary.Device -join ', ')")) }
         } else {
             $lines.Add((New-StatusLine 'Info' "$($store.Label): no telemetry_switch.ini present ($($store.Dir))"))

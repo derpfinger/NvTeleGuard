@@ -17,7 +17,7 @@ Old telemetry blockers haven't been updated in many years, this is built for the
 
 ![Advanced section expanded, dry run on, a pending change waiting for Apply](docs/screenshot-advanced.png)
 
-**Test Telemetry Status** runs a read-only diagnostic and writes the findings into the log: driver / NVIDIA App / Telemetry Client versions, each control's live state, whether the telemetry DLL is loaded in any process, the consent flags NVIDIA stores in `telemetry_switch.ini`, how many events are queued in `events.dat`, and which endpoints the hosts file blocks.
+**Test Telemetry Status** runs a read-only diagnostic and writes the findings into the log: driver / NVIDIA App / Telemetry Client versions, each control's live state, whether the telemetry DLL is loaded in any process, the consent flags NVIDIA stores in `telemetry_switch.ini`, how many events are queued in `events.dat`, and which endpoints the hosts file blocks. (The numeric IDs in the consent lines are NVIDIA *component* IDs hard-coded in NVIDIA's own DLLs — the same on every PC — not identifiers for you or your hardware. NvTeleGuard never displays the per-device `DeviceId` that the telemetry client generates.)
 
 ## How changes are applied
 

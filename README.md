@@ -4,7 +4,7 @@ A small Windows utility that turns NVIDIA driver / NVIDIA App telemetry off — 
 
 ![NvTeleGuard main window](docs/screenshot.png)
 
-It is a from-scratch successor to [NateShoffner/Disable-Nvidia-Telemetry](https://github.com/NateShoffner/Disable-Nvidia-Telemetry), rebuilt for the NVIDIA App era: on current drivers the standalone telemetry service, `NvTm*` scheduled tasks and opt-out registry keys that older tools targeted **no longer exist**. The telemetry client is now a plugin that the NVIDIA LocalSystem Container loads through a directory junction — and that junction is what NvTeleGuard removes.
+Old telemetry blockers haven't been updated in many years, this is built for the NVIDIA App era: on current drivers the standalone telemetry service, `NvTm*` scheduled tasks and opt-out registry keys that older tools targeted **no longer exist**. The telemetry client is now a plugin that the NVIDIA LocalSystem Container loads through a directory junction — and that junction is what NvTeleGuard removes.
 
 ## What it does
 

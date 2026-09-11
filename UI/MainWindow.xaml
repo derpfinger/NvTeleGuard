@@ -110,6 +110,12 @@
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter TargetName="Bd" Property="Background" Value="{StaticResource AccentSoftBrush}"/>
               </Trigger>
+              <!-- Tag="busy": the code paints a progress fill into Background; keep it visible even while hovered -->
+              <Trigger Property="Tag" Value="busy">
+                <Setter TargetName="Bd" Property="Background" Value="{Binding Background, RelativeSource={RelativeSource TemplatedParent}}"/>
+                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Cursor" Value="Wait"/>
+              </Trigger>
               <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Opacity" Value="0.45"/>
               </Trigger>

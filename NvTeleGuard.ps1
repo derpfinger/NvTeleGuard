@@ -554,14 +554,58 @@ function Invoke-RestoreAll {
     Set-Status 'Restore All Original finished'
 }
 
-function Invoke-StatusTest {
-    Set-Status 'Running telemetry status test...'
+function Set-TestButtonProgress {
+    # Paints the button's background as a left-to-right fill up to $Pct and shows the percentage.
+    param([int]$Pct, [string]$Stage)
+    $btn = $UI.BtnTestStatus
+    $pct = [Math]::Max(0, [Math]::Min(100, $Pct))
+    $edge = $pct / 100.0
+    $fill = ([Windows.Media.SolidColorBrush](Get-Brush 'AccentBrush')).Color
+    $brush = New-Object Windows.Media.LinearGradientBrush
+    $brush.StartPoint = New-Object Windows.Point(0, 0)
+    $brush.EndPoint = New-Object Windows.Point(1, 0)
+    $brush.GradientStops.Add((New-Object Windows.Media.GradientStop($fill, 0)))
+    $brush.GradientStops.Add((New-Object Windows.Media.GradientStop($fill, $edge)))
+    $brush.GradientStops.Add((New-Object Windows.Media.GradientStop([Windows.Media.Colors]::Transparent, $edge)))
+    $brush.GradientStops.Add((New-Object Windows.Media.GradientStop([Windows.Media.Colors]::Transparent, 1)))
+    $btn.Background = $brush
+    $btn.Content = "$pct%"
+    Set-Status "Status test: $Stage... $pct%"
     Update-Ui
-    Write-Log -Category 'Status' -Message '----- Telemetry status test -----' -Result 'Info'
-    $lines = @(Get-TelemetryStatusReport -Targets $script:Targets -AppVersion $script:AppVersion -IsElevated $script:IsAdmin)
-    foreach ($l in $lines) { Write-Log -Category 'Status' -Message $l.Message -Result $l.Level }
-    Update-AllCards
-    Set-Status "Status test complete - $($lines.Count) finding(s) logged"
+    if ($script:ScreenshotPath -and $ScreenshotScene -eq 'main' -and -not $script:ProgressShotDone -and $pct -ge 55) {
+        $script:ProgressShotDone = $true
+        Save-Screenshot -Path ($script:ScreenshotPath -replace '\.png$', '-progress.png')
+    }
+}
+
+function Reset-TestButton {
+    $btn = $UI.BtnTestStatus
+    $btn.Tag = $null
+    $btn.Background = [Windows.Media.Brushes]::Transparent
+    $btn.Content = 'Test Telemetry Status'
+    $btn.ClearValue([Windows.FrameworkElement]::MinWidthProperty)
+}
+
+function Invoke-StatusTest {
+    if ($script:StatusRunning) { return }
+    $script:StatusRunning = $true
+    $btn = $UI.BtnTestStatus
+    try {
+        $btn.MinWidth = $btn.ActualWidth   # keep the action bar from shifting while the label is a percentage
+        $btn.Tag = 'busy'
+        Set-TestButtonProgress -Pct 0 -Stage 'starting'
+        Write-Log -Category 'Status' -Message '----- Telemetry status test -----' -Result 'Info'
+        $count = 0
+        $lines = @(Get-TelemetryStatusReport -Targets $script:Targets -AppVersion $script:AppVersion -IsElevated $script:IsAdmin `
+            -OnProgress { param($pct, $stage) Set-TestButtonProgress -Pct $pct -Stage $stage } `
+            -OnLine { param($l) Write-Log -Category 'Status' -Message $l.Message -Result $l.Level })
+        $count = $lines.Count
+        Update-AllCards
+        Set-Status "Status test complete - $count finding(s) logged"
+    } finally {
+        Reset-TestButton
+        $script:StatusRunning = $false
+    }
 }
 
 function Invoke-CheckUpdates {

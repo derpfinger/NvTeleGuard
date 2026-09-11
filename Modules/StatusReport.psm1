@@ -35,10 +35,19 @@ function Get-TelemetryStatusReport {
     param(
         [Parameter(Mandatory)]$Targets,
         [string]$AppVersion = '0.0.0',
-        [bool]$IsElevated = $false
+        [bool]$IsElevated = $false,
+        [scriptblock]$OnProgress,   # called with (percent, stage) as each section completes
+        [scriptblock]$OnLine        # called with each status line as soon as it is known
     )
     $lines = New-Object System.Collections.Generic.List[object]
+    $ctx = @{ Flushed = 0 }
+    $progress = {
+        param([int]$Pct, [string]$Stage)
+        if ($OnLine) { while ($ctx.Flushed -lt $lines.Count) { & $OnLine $lines[$ctx.Flushed]; $ctx.Flushed++ } }
+        if ($OnProgress) { & $OnProgress $Pct $Stage }
+    }
     $lines.Add((New-StatusLine 'Info' ("Status test started - NvTeleGuard $AppVersion, " + $(if ($IsElevated) { 'running as administrator' } else { 'NOT elevated (some checks limited)' }))))
+    & $progress 2 'starting'
 
     # --- Environment ---------------------------------------------------------------------------
     try {
@@ -56,15 +65,20 @@ function Get-TelemetryStatusReport {
     if ($tc) { $lines.Add((New-StatusLine 'Info' "NVIDIA Telemetry Client component installed: v$($tc.DisplayVersion)")) }
     else { $lines.Add((New-StatusLine 'OK' 'NVIDIA Telemetry Client component is not installed')) }
 
+    & $progress 10 'environment'
+
     # --- Per-target live state -----------------------------------------------------------------
     $active = 0; $blocked = 0; $absent = 0
-    foreach ($t in $Targets) {
+    $targetList = @($Targets)
+    for ($i = 0; $i -lt $targetList.Count; $i++) {
+        $t = $targetList[$i]
         $s = Get-TargetState -Target $t
         switch ($s.State) {
             'Enabled'    { $active++;  $lines.Add((New-StatusLine 'Warn' "ACTIVE   $($t.DisplayName) - $($s.Detail)")) }
             'Disabled'   { $blocked++; $lines.Add((New-StatusLine 'OK'   "BLOCKED  $($t.DisplayName) - $($s.Detail)")) }
             default      { $absent++;  $lines.Add((New-StatusLine 'Info' "n/a      $($t.DisplayName) - $($s.Detail)")) }
         }
+        & $progress (10 + [int](50 * ($i + 1) / [Math]::Max(1, $targetList.Count))) "checking $($t.DisplayName)"
     }
 
     # --- Is the telemetry DLL actually loaded right now? -----------------------------------------
@@ -83,6 +97,8 @@ function Get-TelemetryStatusReport {
         else { $lines.Add((New-StatusLine 'Info' 'NvTelemetry DLL not seen in processes visible to this user (run as administrator to inspect services)')) }
     } catch { $lines.Add((New-StatusLine 'Info' "Process inspection failed: $($_.Exception.Message)")) }
 
+    & $progress 72 'inspecting processes'
+
     # --- Container services --------------------------------------------------------------------
     foreach ($svcName in 'NvContainerLocalSystem', 'NVDisplay.ContainerLocalSystem') {
         $svc = Get-Service -Name $svcName -ErrorAction SilentlyContinue
@@ -90,6 +106,8 @@ function Get-TelemetryStatusReport {
         $note = if ($svcName -eq 'NVDisplay.ContainerLocalSystem') { ' - display driver container; hosts DisplayDriverRAS and GameSessionTelemetry plugins (informational, not controlled by NvTeleGuard)' } else { ' - hosts the NvTelemetry plugin when the junction is present' }
         $lines.Add((New-StatusLine 'Info' "Service $svcName is $($svc.Status) (startup $($svc.StartType))$note"))
     }
+
+    & $progress 78 'container services'
 
     # --- Consent / queue files written by the telemetry client -----------------------------------
     $stores = @(
@@ -115,6 +133,8 @@ function Get-TelemetryStatusReport {
         } catch { }
     }
 
+    & $progress 90 'consent files'
+
     # --- Hosts file ------------------------------------------------------------------------------
     $hostsPath = Get-HostsFilePath
     $hostsText = ''
@@ -126,9 +146,12 @@ function Get-TelemetryStatusReport {
     if ($blockedHosts.Count -gt 0) { $lines.Add((New-StatusLine 'OK' ("Hosts file blocks: " + ($blockedHosts -join ', ')))) }
     if ($openHosts.Count -gt 0)    { $lines.Add((New-StatusLine 'Info' ("Endpoints not blocked in hosts file: " + ($openHosts -join ', ')))) }
 
+    & $progress 96 'hosts file'
+
     # --- Summary ---------------------------------------------------------------------------------
     $verdictLevel = if ($active -eq 0) { 'OK' } else { 'Warn' }
     $lines.Add((New-StatusLine $verdictLevel "Summary: $blocked blocked, $active still active, $absent not applicable on this driver"))
+    & $progress 100 'done'
     return $lines.ToArray()
 }
 

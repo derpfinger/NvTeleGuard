@@ -30,7 +30,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$script:AppVersion = '1.0.0'
+$script:AppVersion = '1.0.1'
 $script:AppRoot = $PSScriptRoot
 if (-not $script:AppRoot) { $script:AppRoot = Split-Path -Parent $MyInvocation.MyCommand.Path }
 $script:ScreenshotPath = $ScreenshotPath

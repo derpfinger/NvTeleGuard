@@ -77,6 +77,24 @@ function New-Result {
 # Target inventory
 # ---------------------------------------------------------------------------------------------
 
+function Get-FriendlyTaskName {
+    # NVIDIA suffixes most task names with a per-install GUID; show a readable name and keep the raw
+    # name in the card's detail line instead.
+    param([string]$TaskName)
+    $base = $TaskName -replace '_\{[^}]+\}$', ''
+    switch -Wildcard ($base) {
+        'NVIDIA App SelfUpdate'      { return 'NVIDIA App self-update check' }
+        'NvDriverUpdateCheckDaily'   { return 'Driver update check (daily)' }
+        'NvDriverUpdateCheckOnLogon*' { return 'Driver update check (at logon)' }
+        'NvProfileUpdaterDaily'      { return 'Game profile updater (daily)' }
+        'NvProfileUpdaterOnLogon'    { return 'Game profile updater (at logon)' }
+        'NvTmMon'                    { return 'Telemetry monitor task (NvTmMon)' }
+        'NvTmRepOnLogon'             { return 'Telemetry report task at logon (NvTmRepOnLogon)' }
+        'NvTmRep*'                   { return "Telemetry report task ($base)" }
+        default                      { return "Scheduled task $base" }
+    }
+}
+
 function Get-TelemetryTargets {
     $list = New-Object System.Collections.Generic.List[object]
 
@@ -98,7 +116,7 @@ function Get-TelemetryTargets {
     if ($tmTasks.Count -gt 0) {
         foreach ($t in $tmTasks) {
             $list.Add((New-Target -Id "task:$($t.TaskPath)$($t.TaskName)" -Category 'Legacy Telemetry Tasks' -Order 3 `
-                -DisplayName "Scheduled task $($t.TaskName)" `
+                -DisplayName (Get-FriendlyTaskName $t.TaskName) `
                 -Description "Telemetry monitor/report task under $($t.TaskPath)." `
                 -Kind 'ScheduledTask' -Recommended -Params @{ TaskPath = $t.TaskPath; TaskName = $t.TaskName }))
         }
@@ -130,7 +148,7 @@ function Get-TelemetryTargets {
     if ($updateTasks.Count -gt 0) {
         foreach ($t in $updateTasks) {
             $list.Add((New-Target -Id "task:$($t.TaskPath)$($t.TaskName)" -Category 'Update-Check Tasks (optional)' -Order 5 `
-                -DisplayName "Scheduled task $($t.TaskName)" `
+                -DisplayName (Get-FriendlyTaskName $t.TaskName) `
                 -Description 'This task phones home to NVIDIA to check for NVIDIA App / driver updates. Switch OFF = NVIDIA keeps checking and can self-update. Switch ON + Apply Changes = the task is disabled and the system stops contacting NVIDIA for update checks (you can still update manually).' `
                 -Kind 'ScheduledTask' -Params @{ TaskPath = $t.TaskPath; TaskName = $t.TaskName }))
         }
@@ -197,9 +215,10 @@ function Get-TargetState {
 
             'ScheduledTask' {
                 $t = Get-ScheduledTask -TaskPath $p.TaskPath -TaskName $p.TaskName -ErrorAction SilentlyContinue
-                if (-not $t) { return New-State 'NotPresent' 'Task no longer exists' }
-                if ($t.State -eq 'Disabled') { return New-State 'Disabled' 'Task state: Disabled' }
-                return New-State 'Enabled' "Task state: $($t.State)"
+                $where = "Task Scheduler: $($p.TaskPath)$($p.TaskName)"
+                if (-not $t) { return New-State 'NotPresent' "Task no longer exists ($where)" }
+                if ($t.State -eq 'Disabled') { return New-State 'Disabled' "Task state: Disabled - $where" }
+                return New-State 'Enabled' "Task state: $($t.State) - $where"
             }
 
             'RegistryValues' {

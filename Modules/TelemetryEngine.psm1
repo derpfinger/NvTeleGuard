@@ -83,15 +83,26 @@ function Get-FriendlyTaskName {
     param([string]$TaskName)
     $base = $TaskName -replace '_\{[^}]+\}$', ''
     switch -Wildcard ($base) {
-        'NVIDIA App SelfUpdate'      { return 'NVIDIA App self-update check' }
-        'NvDriverUpdateCheckDaily'   { return 'Driver update check (daily)' }
-        'NvDriverUpdateCheckOnLogon*' { return 'Driver update check (at logon)' }
+        'NVIDIA App SelfUpdate'      { return 'Disable NVIDIA App/Driver auto-update check' }
+        'NvDriverUpdateCheckDaily'   { return 'Disable driver auto-update check (daily)' }
+        'NvDriverUpdateCheckOnLogon*' { return 'Disable driver auto-update check (at logon)' }
         'NvProfileUpdaterDaily'      { return 'Game profile updater (daily)' }
         'NvProfileUpdaterOnLogon'    { return 'Game profile updater (at logon)' }
         'NvTmMon'                    { return 'Telemetry monitor task (NvTmMon)' }
         'NvTmRepOnLogon'             { return 'Telemetry report task at logon (NvTmRepOnLogon)' }
         'NvTmRep*'                   { return "Telemetry report task ($base)" }
         default                      { return "Scheduled task $base" }
+    }
+}
+
+function Get-UpdateTaskDescription {
+    param([string]$TaskName)
+    $base = $TaskName -replace '_\{[^}]+\}$', ''
+    switch -Wildcard ($base) {
+        'NVIDIA App SelfUpdate' { return 'This task phones home to NVIDIA to send you notifications of updates to the NVIDIA App itself and when new driver updates are available. Enable to stop these notifications.' }
+        'NvDriverUpdateCheck*'  { return 'This task phones home to NVIDIA to send you notifications when new driver updates are available. Enable to stop these notifications.' }
+        'NvProfileUpdater*'     { return 'This task phones home to NVIDIA to download updated game profiles (optimal settings). Enable to stop it.' }
+        default                 { return 'This task phones home to NVIDIA to check for updates. Enable to stop it.' }
     }
 }
 
@@ -149,7 +160,7 @@ function Get-TelemetryTargets {
         foreach ($t in $updateTasks) {
             $list.Add((New-Target -Id "task:$($t.TaskPath)$($t.TaskName)" -Category 'Update-Check Tasks (optional)' -Order 5 `
                 -DisplayName (Get-FriendlyTaskName $t.TaskName) `
-                -Description 'This task phones home to NVIDIA to check for NVIDIA App / driver updates. Switch OFF = NVIDIA keeps checking and can self-update. Switch ON + Apply Changes = the task is disabled and the system stops contacting NVIDIA for update checks (you can still update manually).' `
+                -Description (Get-UpdateTaskDescription $t.TaskName) `
                 -Kind 'ScheduledTask' -Params @{ TaskPath = $t.TaskPath; TaskName = $t.TaskName }))
         }
     } else {
